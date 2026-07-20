@@ -1,19 +1,17 @@
 const taskService = require('../services/task.service');
-
-const catchAsync = (fn) => (req, res, next) => {
-    fn(req, res, next).catch(next);
-};
+const catchAsync = require('../utils/catchAsync');
 
 const getAllTasks = catchAsync(async (req, res) => {
+    const userId = req.user.id;
     const { priority, ...filters } = req.query;
     let tasks;
 
     if (priority) {
-        tasks = await taskService.filterByPriority(priority);
+        tasks = await taskService.filterByPriority(userId, priority);
     } else if (Object.keys(filters).length > 0) {
-        tasks = await taskService.advancedFilter(req.query);
+        tasks = await taskService.advancedFilter(userId, req.query);
     } else {
-        tasks = await taskService.getAllTasks();
+        tasks = await taskService.getAllTasks(userId);
     }
 
     res.json({
@@ -24,7 +22,8 @@ const getAllTasks = catchAsync(async (req, res) => {
 });
 
 const getTask = catchAsync(async (req, res) => {
-    const task = await taskService.getTask(req.params.id);
+    const userId = req.user.id;
+    const task = await taskService.getTask(req.params.id, userId);
     if (!task) {
         return res.status(404).json({
             status: 'error',
@@ -35,6 +34,7 @@ const getTask = catchAsync(async (req, res) => {
 });
 
 const createTask = catchAsync(async (req, res) => {
+    const userId = req.user.id;
     const { title, description, priority } = req.body;
 
     if (!title) {
@@ -44,12 +44,13 @@ const createTask = catchAsync(async (req, res) => {
         });
     }
 
-    const task = await taskService.createTask({ title, description, priority });
+    const task = await taskService.createTask({ title, description, priority, userId });
     res.status(201).json({ status: 'success', data: task });
 });
 
 const updateTask = catchAsync(async (req, res) => {
-    const task = await taskService.updateTask(req.params.id, req.body);
+    const userId = req.user.id;
+    const task = await taskService.updateTask(req.params.id, userId, req.body);
     if (!task) {
         return res.status(404).json({
             status: 'error',
@@ -60,7 +61,8 @@ const updateTask = catchAsync(async (req, res) => {
 });
 
 const deleteTask = catchAsync(async (req, res) => {
-    const deleted = await taskService.deleteTask(req.params.id);
+    const userId = req.user.id;
+    const deleted = await taskService.deleteTask(req.params.id, userId);
     if (!deleted) {
         return res.status(404).json({
             status: 'error',
@@ -71,7 +73,8 @@ const deleteTask = catchAsync(async (req, res) => {
 });
 
 const getDuplicates = catchAsync(async (req, res) => {
-    const duplicates = await taskService.findDuplicateTasks();
+    const userId = req.user.id;
+    const duplicates = await taskService.findDuplicateTasks(userId);
     res.json({
         status: 'success',
         results: duplicates.length,
